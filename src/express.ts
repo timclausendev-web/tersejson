@@ -8,6 +8,19 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { TerseMiddlewareOptions } from './types';
 import { compress, isCompressibleArray } from './core';
+import { recordEvent, TerseAnalytics, AnalyticsConfig } from './analytics';
+
+/**
+ * Extended middleware options with analytics
+ */
+export interface TerseMiddlewareOptionsWithAnalytics extends TerseMiddlewareOptions {
+  /**
+   * Analytics configuration
+   * Set to true for local-only analytics
+   * Set to { apiKey: 'xxx' } for cloud reporting
+   */
+  analytics?: boolean | Partial<AnalyticsConfig> | TerseAnalytics;
+}
 
 const DEFAULT_OPTIONS: Required<TerseMiddlewareOptions> = {
   // Middleware-specific options
@@ -42,8 +55,22 @@ const DEFAULT_OPTIONS: Required<TerseMiddlewareOptions> = {
  * });
  * ```
  */
-export function terse(options: TerseMiddlewareOptions = {}): RequestHandler {
-  const config = { ...DEFAULT_OPTIONS, ...options };
+export function terse(options: TerseMiddlewareOptionsWithAnalytics = {}): RequestHandler {
+  const { analytics: analyticsOption, ...restOptions } = options;
+  const config = { ...DEFAULT_OPTIONS, ...restOptions };
+
+  // Setup analytics if enabled
+  let analyticsInstance: TerseAnalytics | null = null;
+  if (analyticsOption) {
+    if (analyticsOption instanceof TerseAnalytics) {
+      analyticsInstance = analyticsOption;
+    } else if (analyticsOption === true) {
+      // Local-only analytics
+      analyticsInstance = new TerseAnalytics({ enabled: true, debug: config.debug });
+    } else if (typeof analyticsOption === 'object') {
+      analyticsInstance = new TerseAnalytics({ enabled: true, ...analyticsOption });
+    }
+  }
 
   return function terseMiddleware(
     req: Request,
@@ -80,8 +107,10 @@ export function terse(options: TerseMiddlewareOptions = {}): RequestHandler {
       }
 
       try {
+        const dataArray = data as Record<string, unknown>[];
+
         // Compress the data
-        const compressed = compress(data as Record<string, unknown>[], {
+        const compressed = compress(dataArray, {
           minKeyLength: config.minKeyLength,
           maxDepth: config.maxDepth,
           keyPattern: config.keyPattern,
@@ -91,10 +120,34 @@ export function terse(options: TerseMiddlewareOptions = {}): RequestHandler {
           includeKeys: config.includeKeys,
         });
 
-        // Calculate savings for debugging
+        // Calculate sizes
+        const originalSize = JSON.stringify(data).length;
+        const compressedSize = JSON.stringify(compressed).length;
+
+        // Record analytics
+        if (analyticsInstance) {
+          analyticsInstance.record({
+            originalSize,
+            compressedSize,
+            objectCount: dataArray.length,
+            keysCompressed: Object.keys(compressed.k).length,
+            endpoint: req.path,
+            keyPattern: compressed.p || 'alpha',
+          });
+        }
+
+        // Also record to global analytics if initialized
+        recordEvent({
+          originalSize,
+          compressedSize,
+          objectCount: dataArray.length,
+          keysCompressed: Object.keys(compressed.k).length,
+          endpoint: req.path,
+          keyPattern: compressed.p || 'alpha',
+        });
+
+        // Debug logging
         if (config.debug) {
-          const originalSize = JSON.stringify(data).length;
-          const compressedSize = JSON.stringify(compressed).length;
           const savings = ((1 - compressedSize / originalSize) * 100).toFixed(1);
           console.log(
             `[tersejson] Compressed ${originalSize} -> ${compressedSize} bytes (${savings}% savings)`
@@ -140,6 +193,10 @@ export function terseQueryParam(paramName: string = 'terse'): RequestHandler {
     next();
   };
 }
+
+// Re-export analytics for convenience
+export { TerseAnalytics, analytics, initAnalytics, getAnalytics } from './analytics';
+export type { AnalyticsConfig, AnalyticsStats, CompressionEvent } from './analytics';
 
 // Default export for convenience
 export default terse;

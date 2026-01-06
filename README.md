@@ -364,6 +364,65 @@ function UserList() {
 }
 ```
 
+## Analytics (Opt-in)
+
+TerseJSON includes optional analytics to track your compression savings.
+
+### Local Analytics
+
+Track compression stats without sending data anywhere:
+
+```typescript
+import { terse } from 'tersejson/express';
+import { analytics } from 'tersejson/analytics';
+
+// Enable local-only analytics
+app.use(terse({ analytics: true }));
+
+// Or with custom callbacks
+app.use(terse({
+  analytics: {
+    enabled: true,
+    onEvent: (event) => {
+      console.log(`Saved ${event.originalSize - event.compressedSize} bytes`);
+    },
+  },
+}));
+
+// Check your savings anytime
+setInterval(() => {
+  console.log(analytics.getSummary());
+  // "TerseJSON Stats: 1,234 compressions, 847KB saved (73.2% avg)"
+}, 60000);
+```
+
+### Cloud Analytics (tersejson.com)
+
+Get a dashboard with your compression stats at tersejson.com:
+
+```typescript
+app.use(terse({
+  analytics: {
+    apiKey: 'your-api-key', // Get one at tersejson.com/dashboard
+    projectId: 'my-app',
+    reportToCloud: true,
+  },
+}));
+```
+
+Dashboard features:
+- Real-time compression stats
+- Bandwidth savings over time
+- Per-endpoint analytics
+- Team sharing
+
+### Privacy
+
+- Analytics are **100% opt-in**
+- Endpoint paths are hashed (no sensitive data)
+- No request/response content is ever collected
+- Only aggregate stats are reported
+
 ## FAQ
 
 ### Does this work with nested objects?

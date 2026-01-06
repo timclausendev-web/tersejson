@@ -56,3 +56,18 @@ export type {
 export * as express from './express';
 export * as client from './client';
 export * as integrations from './integrations';
+
+// Analytics exports
+export {
+  TerseAnalytics,
+  analytics,
+  initAnalytics,
+  getAnalytics,
+  recordEvent,
+} from './analytics';
+
+export type {
+  AnalyticsConfig,
+  AnalyticsStats,
+  CompressionEvent,
+} from './analytics';

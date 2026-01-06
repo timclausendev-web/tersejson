@@ -6,6 +6,7 @@ export default defineConfig({
     express: 'src/express.ts',
     client: 'src/client.ts',
     integrations: 'src/integrations.ts',
+    analytics: 'src/analytics.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,

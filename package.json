@@ -44,6 +44,11 @@
       "types": "./dist/integrations.d.ts",
       "import": "./dist/integrations.mjs",
       "require": "./dist/integrations.js"
+    },
+    "./analytics": {
+      "types": "./dist/analytics.d.ts",
+      "import": "./dist/analytics.mjs",
+      "require": "./dist/analytics.js"
     }
   },
   "files": [
