@@ -291,3 +291,120 @@ describe('compression ratio', () => {
     expect(expanded).toEqual(users);
   });
 });
+
+describe('key patterns', () => {
+  const testData = [
+    { firstName: 'John', lastName: 'Doe' },
+    { firstName: 'Jane', lastName: 'Smith' },
+  ];
+
+  it('uses alpha pattern by default', () => {
+    const result = compress(testData);
+    const keys = Object.keys(result.k);
+    expect(keys).toContain('a');
+    expect(keys).toContain('b');
+    expect(result.p).toBe('alpha');
+  });
+
+  it('supports numeric pattern', () => {
+    const result = compress(testData, { keyPattern: 'numeric' });
+    const keys = Object.keys(result.k);
+    expect(keys).toContain('0');
+    expect(keys).toContain('1');
+    expect(result.p).toBe('numeric');
+  });
+
+  it('supports alphanumeric pattern', () => {
+    const result = compress(testData, { keyPattern: 'alphanumeric' });
+    const keys = Object.keys(result.k);
+    expect(keys[0]).toMatch(/^[a-z]\d$/);
+    expect(result.p).toBe('alphanumeric');
+  });
+
+  it('supports prefixed pattern with custom prefix', () => {
+    const result = compress(testData, { keyPattern: { prefix: 'json' } });
+    const keys = Object.keys(result.k);
+    expect(keys).toContain('json0');
+    expect(keys).toContain('json1');
+    expect(result.p).toBe('prefixed:json');
+  });
+
+  it('supports prefixed pattern with alpha style', () => {
+    const result = compress(testData, { keyPattern: { prefix: 'f_', style: 'alpha' } });
+    const keys = Object.keys(result.k);
+    expect(keys).toContain('f_a');
+    expect(keys).toContain('f_b');
+  });
+
+  it('supports custom key generator function', () => {
+    const customGenerator = (i: number) => `field${i}`;
+    const result = compress(testData, { keyPattern: customGenerator });
+    const keys = Object.keys(result.k);
+    expect(keys).toContain('field0');
+    expect(keys).toContain('field1');
+    expect(result.p).toBe('custom');
+  });
+});
+
+describe('nested handling', () => {
+  const nestedData = [
+    {
+      userName: 'john',
+      profile: { displayName: 'John Doe', avatarUrl: 'http://example.com' },
+      orders: [
+        { productName: 'Widget', quantity: 5 },
+      ],
+    },
+  ];
+
+  it('compresses all nested structures with deep mode (default)', () => {
+    const result = compress(nestedData, { nestedHandling: 'deep' });
+    const compressedKeys = Object.values(result.k);
+    expect(compressedKeys).toContain('userName');
+    expect(compressedKeys).toContain('displayName');
+    expect(compressedKeys).toContain('productName');
+  });
+
+  it('only compresses top-level with shallow mode', () => {
+    const result = compress(nestedData, { nestedHandling: 'shallow' });
+    const compressedKeys = Object.values(result.k);
+    expect(compressedKeys).toContain('userName');
+    expect(compressedKeys).not.toContain('displayName');
+    expect(compressedKeys).not.toContain('productName');
+  });
+
+  it('only compresses nested arrays with arrays mode', () => {
+    const result = compress(nestedData, { nestedHandling: 'arrays' });
+    const compressedKeys = Object.values(result.k);
+    expect(compressedKeys).toContain('userName');
+    expect(compressedKeys).not.toContain('displayName'); // nested object, not array
+    expect(compressedKeys).toContain('productName'); // nested array
+  });
+
+  it('respects numeric depth limit', () => {
+    const result = compress(nestedData, { nestedHandling: 1 });
+    const compressedKeys = Object.values(result.k);
+    expect(compressedKeys).toContain('userName');
+    expect(compressedKeys).not.toContain('displayName');
+  });
+});
+
+describe('key filtering', () => {
+  const testData = [
+    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john@example.com' },
+    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane@example.com' },
+  ];
+
+  it('excludes specified keys', () => {
+    const result = compress(testData, { excludeKeys: ['email'] });
+    const compressedKeys = Object.values(result.k);
+    expect(compressedKeys).toContain('firstName');
+    expect(compressedKeys).not.toContain('email');
+  });
+
+  it('includes specified keys even if short', () => {
+    const result = compress(testData, { includeKeys: ['id'], minKeyLength: 3 });
+    const compressedKeys = Object.values(result.k);
+    expect(compressedKeys).toContain('id');
+  });
+});

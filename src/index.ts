@@ -36,6 +36,7 @@ export {
   isTersePayload,
   createTerseProxy,
   wrapWithProxy,
+  createKeyGenerator,
 } from './core';
 
 // Type exports
@@ -43,6 +44,11 @@ export type {
   TersePayload,
   TerseMiddlewareOptions,
   TerseClientOptions,
+  CompressOptions,
+  KeyPattern,
+  KeyPatternPreset,
+  KeyGenerator,
+  NestedHandling,
   Tersed,
 } from './types';
 

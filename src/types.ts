@@ -17,18 +17,46 @@ export interface TersePayload<T = unknown> {
   k: Record<string, string>;
   /** The compressed data with short keys */
   d: T;
+  /** Pattern used for key generation (for debugging/info) */
+  p?: string;
 }
 
 /**
- * Configuration options for the Express middleware
+ * Built-in key pattern presets
  */
-export interface TerseMiddlewareOptions {
-  /**
-   * Minimum array length to trigger compression
-   * @default 2
-   */
-  minArrayLength?: number;
+export type KeyPatternPreset =
+  | 'alpha'      // a, b, c, ... z, aa, ab (default)
+  | 'numeric'    // 0, 1, 2, ... 9, 10, 11
+  | 'alphanumeric' // a1, a2, ... a9, b1, b2
+  | 'short'      // _, __, ___, a, b (shortest possible)
+  | 'prefixed';  // k0, k1, k2 (with 'k' prefix)
 
+/**
+ * Custom key generator function
+ */
+export type KeyGenerator = (index: number) => string;
+
+/**
+ * Key pattern configuration
+ */
+export type KeyPattern =
+  | KeyPatternPreset
+  | { prefix: string; style?: 'numeric' | 'alpha' }
+  | KeyGenerator;
+
+/**
+ * How to handle nested structures
+ */
+export type NestedHandling =
+  | 'deep'       // Compress all nested objects/arrays (default)
+  | 'shallow'    // Only compress top-level array
+  | 'arrays'     // Only compress nested arrays, not single objects
+  | number;      // Specific depth limit (1 = shallow, Infinity = deep)
+
+/**
+ * Compression options
+ */
+export interface CompressOptions {
   /**
    * Minimum key length to consider for compression
    * Keys shorter than this won't be shortened
@@ -41,6 +69,45 @@ export interface TerseMiddlewareOptions {
    * @default 10
    */
   maxDepth?: number;
+
+  /**
+   * Key pattern to use for generating short keys
+   * @default 'alpha'
+   */
+  keyPattern?: KeyPattern;
+
+  /**
+   * How to handle nested objects and arrays
+   * @default 'deep'
+   */
+  nestedHandling?: NestedHandling;
+
+  /**
+   * Only compress keys that appear in all objects (homogeneous)
+   * @default false
+   */
+  homogeneousOnly?: boolean;
+
+  /**
+   * Keys to always exclude from compression
+   */
+  excludeKeys?: string[];
+
+  /**
+   * Keys to always include in compression (even if short)
+   */
+  includeKeys?: string[];
+}
+
+/**
+ * Configuration options for the Express middleware
+ */
+export interface TerseMiddlewareOptions extends CompressOptions {
+  /**
+   * Minimum array length to trigger compression
+   * @default 2
+   */
+  minArrayLength?: number;
 
   /**
    * Custom function to determine if a response should be compressed

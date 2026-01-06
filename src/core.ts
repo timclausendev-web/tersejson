@@ -4,12 +4,23 @@
  * The core compression and expansion algorithms.
  */
 
-import { TersePayload, isTersePayload } from './types';
+import {
+  TersePayload,
+  isTersePayload,
+  KeyPattern,
+  KeyGenerator,
+  NestedHandling,
+  CompressOptions,
+} from './types';
+
+// ============================================================================
+// KEY PATTERN GENERATORS
+// ============================================================================
 
 /**
- * Generates short keys: a, b, c, ... z, aa, ab, ...
+ * Alpha pattern: a, b, c, ... z, aa, ab, ...
  */
-function generateShortKey(index: number): string {
+function alphaGenerator(index: number): string {
   let key = '';
   let remaining = index;
 
@@ -22,47 +33,179 @@ function generateShortKey(index: number): string {
 }
 
 /**
+ * Numeric pattern: 0, 1, 2, ... 9, 10, 11, ...
+ */
+function numericGenerator(index: number): string {
+  return String(index);
+}
+
+/**
+ * Alphanumeric pattern: a1, a2, ... a9, b1, b2, ...
+ */
+function alphanumericGenerator(index: number): string {
+  const letterIndex = Math.floor(index / 9);
+  const numIndex = (index % 9) + 1;
+  return alphaGenerator(letterIndex) + numIndex;
+}
+
+/**
+ * Short pattern: uses shortest possible keys
+ * _, a, b, ..., z, aa, ab, ...
+ */
+function shortGenerator(index: number): string {
+  if (index === 0) return '_';
+  return alphaGenerator(index - 1);
+}
+
+/**
+ * Prefixed pattern: k0, k1, k2, ...
+ */
+function prefixedGenerator(prefix: string, style: 'numeric' | 'alpha' = 'numeric'): KeyGenerator {
+  return (index: number) => {
+    if (style === 'alpha') {
+      return prefix + alphaGenerator(index);
+    }
+    return prefix + index;
+  };
+}
+
+/**
+ * Creates a key generator from a pattern configuration
+ */
+export function createKeyGenerator(pattern: KeyPattern): { generator: KeyGenerator; name: string } {
+  // If it's already a function, use it directly
+  if (typeof pattern === 'function') {
+    return { generator: pattern, name: 'custom' };
+  }
+
+  // If it's a preset string
+  if (typeof pattern === 'string') {
+    switch (pattern) {
+      case 'alpha':
+        return { generator: alphaGenerator, name: 'alpha' };
+      case 'numeric':
+        return { generator: numericGenerator, name: 'numeric' };
+      case 'alphanumeric':
+        return { generator: alphanumericGenerator, name: 'alphanumeric' };
+      case 'short':
+        return { generator: shortGenerator, name: 'short' };
+      case 'prefixed':
+        return { generator: prefixedGenerator('k'), name: 'prefixed:k' };
+      default:
+        return { generator: alphaGenerator, name: 'alpha' };
+    }
+  }
+
+  // If it's a prefix config object
+  if (typeof pattern === 'object' && 'prefix' in pattern) {
+    return {
+      generator: prefixedGenerator(pattern.prefix, pattern.style || 'numeric'),
+      name: `prefixed:${pattern.prefix}`,
+    };
+  }
+
+  return { generator: alphaGenerator, name: 'alpha' };
+}
+
+/**
+ * Resolves nested handling to a numeric depth
+ */
+function resolveNestedDepth(handling: NestedHandling | undefined, maxDepth: number): number {
+  if (handling === undefined || handling === 'deep') {
+    return maxDepth;
+  }
+  if (handling === 'shallow') {
+    return 1;
+  }
+  if (handling === 'arrays') {
+    return maxDepth; // Special handling in collect/compress functions
+  }
+  if (typeof handling === 'number') {
+    return handling;
+  }
+  return maxDepth;
+}
+
+// Legacy generateShortKey removed - use createKeyGenerator instead
+
+interface CollectKeysOptions {
+  minKeyLength: number;
+  maxDepth: number;
+  nestedHandling: NestedHandling;
+  excludeKeys?: string[];
+  includeKeys?: string[];
+  homogeneousOnly?: boolean;
+}
+
+/**
  * Collects all unique keys from an array of objects
  */
 function collectKeys(
   data: Record<string, unknown>[],
-  minKeyLength: number,
-  maxDepth: number,
+  options: CollectKeysOptions,
   currentDepth: number = 0
 ): Set<string> {
   const keys = new Set<string>();
+  const { minKeyLength, maxDepth, nestedHandling, excludeKeys, includeKeys } = options;
 
   if (currentDepth >= maxDepth) return keys;
+
+  // For homogeneous mode, track key counts
+  const keyCounts = new Map<string, number>();
 
   for (const item of data) {
     if (typeof item !== 'object' || item === null) continue;
 
     for (const key of Object.keys(item)) {
-      // Only compress keys that are long enough to benefit
-      if (key.length >= minKeyLength) {
+      // Skip excluded keys
+      if (excludeKeys?.includes(key)) continue;
+
+      // Include if in includeKeys, or if meets minKeyLength
+      const shouldInclude = includeKeys?.includes(key) || key.length >= minKeyLength;
+
+      if (shouldInclude) {
         keys.add(key);
+        keyCounts.set(key, (keyCounts.get(key) || 0) + 1);
       }
 
-      // Recursively collect keys from nested structures
+      // Handle nested structures based on nestedHandling option
       const value = item[key];
+
+      if (nestedHandling === 'shallow') {
+        // Don't process nested structures
+        continue;
+      }
+
       if (Array.isArray(value) && value.length > 0 && isCompressibleArray(value)) {
-        // Nested array of objects
+        // Nested array of objects - always process
         const nestedKeys = collectKeys(
           value as Record<string, unknown>[],
-          minKeyLength,
-          maxDepth,
+          options,
           currentDepth + 1
         );
         nestedKeys.forEach(k => keys.add(k));
-      } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        // Single nested object
+      } else if (
+        nestedHandling !== 'arrays' &&
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
+        // Single nested object - skip if nestedHandling is 'arrays'
         const nestedKeys = collectKeys(
           [value as Record<string, unknown>],
-          minKeyLength,
-          maxDepth,
+          options,
           currentDepth + 1
         );
         nestedKeys.forEach(k => keys.add(k));
+      }
+    }
+  }
+
+  // If homogeneous mode, only keep keys that appear in ALL objects
+  if (options.homogeneousOnly && data.length > 0) {
+    for (const [key, count] of keyCounts) {
+      if (count < data.length) {
+        keys.delete(key);
       }
     }
   }
@@ -167,10 +310,8 @@ function expandObject(
   return expanded;
 }
 
-export interface CompressOptions {
-  minKeyLength?: number;
-  maxDepth?: number;
-}
+// Re-export CompressOptions from types for backwards compatibility
+export type { CompressOptions } from './types';
 
 /**
  * Compresses an array of objects by replacing keys with short aliases
@@ -179,10 +320,31 @@ export function compress<T extends Record<string, unknown>[]>(
   data: T,
   options: CompressOptions = {}
 ): TersePayload<unknown[]> {
-  const { minKeyLength = 3, maxDepth = 10 } = options;
+  const {
+    minKeyLength = 3,
+    maxDepth = 10,
+    keyPattern = 'alpha',
+    nestedHandling = 'deep',
+    homogeneousOnly = false,
+    excludeKeys,
+    includeKeys,
+  } = options;
+
+  // Create key generator
+  const { generator, name: patternName } = createKeyGenerator(keyPattern);
+
+  // Resolve nested depth
+  const effectiveDepth = resolveNestedDepth(nestedHandling, maxDepth);
 
   // Collect all unique keys
-  const allKeys = collectKeys(data, minKeyLength, maxDepth);
+  const allKeys = collectKeys(data, {
+    minKeyLength,
+    maxDepth: effectiveDepth,
+    nestedHandling,
+    excludeKeys,
+    includeKeys,
+    homogeneousOnly,
+  });
 
   // Sort keys by frequency of use (most used first) for optimal compression
   // For now, just sort alphabetically for deterministic output
@@ -193,7 +355,7 @@ export function compress<T extends Record<string, unknown>[]>(
   const keyMap: Record<string, string> = {};
 
   sortedKeys.forEach((key, index) => {
-    const shortKey = generateShortKey(index);
+    const shortKey = generator(index);
     // Only use short key if it's actually shorter
     if (shortKey.length < key.length) {
       keyToShort.set(key, shortKey);
@@ -203,7 +365,7 @@ export function compress<T extends Record<string, unknown>[]>(
 
   // Compress the data
   const compressed = data.map(item =>
-    compressObject(item, keyToShort, maxDepth)
+    compressObject(item, keyToShort, effectiveDepth)
   );
 
   return {
@@ -211,6 +373,7 @@ export function compress<T extends Record<string, unknown>[]>(
     v: 1,
     k: keyMap,
     d: compressed,
+    p: patternName,
   };
 }
 

@@ -10,12 +10,19 @@ import { TerseMiddlewareOptions } from './types';
 import { compress, isCompressibleArray } from './core';
 
 const DEFAULT_OPTIONS: Required<TerseMiddlewareOptions> = {
+  // Middleware-specific options
   minArrayLength: 2,
-  minKeyLength: 3,
-  maxDepth: 10,
   shouldCompress: () => true,
   headerName: 'x-terse-json',
   debug: false,
+  // CompressOptions
+  minKeyLength: 3,
+  maxDepth: 10,
+  keyPattern: 'alpha',
+  nestedHandling: 'deep',
+  homogeneousOnly: false,
+  excludeKeys: [],
+  includeKeys: [],
 };
 
 /**
@@ -77,6 +84,11 @@ export function terse(options: TerseMiddlewareOptions = {}): RequestHandler {
         const compressed = compress(data as Record<string, unknown>[], {
           minKeyLength: config.minKeyLength,
           maxDepth: config.maxDepth,
+          keyPattern: config.keyPattern,
+          nestedHandling: config.nestedHandling,
+          homogeneousOnly: config.homogeneousOnly,
+          excludeKeys: config.excludeKeys,
+          includeKeys: config.includeKeys,
         });
 
         // Calculate savings for debugging
