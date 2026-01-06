@@ -49,3 +49,4 @@ export type {
 // Re-export submodules for convenience
 export * as express from './express';
 export * as client from './client';
+export * as integrations from './integrations';

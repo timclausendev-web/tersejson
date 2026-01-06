@@ -218,6 +218,152 @@ const users: User[] = await fetch('/api/users').then(r => r.json());
 users[0].firstName; // TypeScript knows this is a string
 ```
 
+## Framework Integrations
+
+TerseJSON provides ready-to-use integrations for popular HTTP clients and frameworks.
+
+### Axios
+
+```typescript
+import axios from 'axios';
+import { createAxiosInterceptors } from 'tersejson/integrations';
+
+const { request, response } = createAxiosInterceptors();
+axios.interceptors.request.use(request);
+axios.interceptors.response.use(response);
+
+// Now all axios requests automatically handle TerseJSON!
+const { data } = await axios.get('/api/users');
+console.log(data[0].firstName); // Works transparently!
+```
+
+### Angular (HttpClient)
+
+```typescript
+// terse.interceptor.ts
+import { Injectable } from '@angular/core';
+import {
+  HttpInterceptor,
+  HttpRequest,
+  HttpHandler,
+  HttpEvent,
+  HttpResponse
+} from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { isTersePayload, wrapWithProxy } from 'tersejson';
+
+@Injectable()
+export class TerseInterceptor implements HttpInterceptor {
+  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    // Add accept-terse header
+    const terseReq = req.clone({
+      setHeaders: { 'accept-terse': 'true' }
+    });
+
+    return next.handle(terseReq).pipe(
+      map(event => {
+        if (event instanceof HttpResponse && event.body) {
+          const isTerse = event.headers.get('x-terse-json') === 'true';
+          if (isTerse && isTersePayload(event.body)) {
+            return event.clone({ body: wrapWithProxy(event.body) });
+          }
+        }
+        return event;
+      })
+    );
+  }
+}
+
+// app.module.ts
+@NgModule({
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: TerseInterceptor, multi: true }
+  ]
+})
+```
+
+### AngularJS (1.x)
+
+```javascript
+angular.module('myApp', [])
+  .factory('terseInterceptor', function() {
+    return {
+      request: function(config) {
+        config.headers = config.headers || {};
+        config.headers['accept-terse'] = 'true';
+        return config;
+      },
+      response: function(response) {
+        var isTerse = response.headers('x-terse-json') === 'true';
+        if (isTerse && response.data && response.data.__terse__) {
+          response.data = tersejson.process(response.data);
+        }
+        return response;
+      }
+    };
+  })
+  .config(['$httpProvider', function($httpProvider) {
+    $httpProvider.interceptors.push('terseInterceptor');
+  }]);
+```
+
+### jQuery
+
+```javascript
+import { setupJQueryAjax } from 'tersejson/integrations';
+
+// One-time setup
+setupJQueryAjax($);
+
+// All jQuery AJAX calls now support TerseJSON
+$.get('/api/users', function(data) {
+  console.log(data[0].firstName); // Works!
+});
+```
+
+### SWR (React)
+
+```typescript
+import useSWR from 'swr';
+import { createSWRFetcher } from 'tersejson/integrations';
+
+const fetcher = createSWRFetcher();
+
+function UserList() {
+  const { data, error } = useSWR('/api/users', fetcher);
+
+  if (error) return <div>Error loading</div>;
+  if (!data) return <div>Loading...</div>;
+
+  return (
+    <ul>
+      {data.map(user => (
+        <li key={user.id}>{user.firstName}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### React Query / TanStack Query
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { createQueryFn } from 'tersejson/integrations';
+
+const queryFn = createQueryFn();
+
+function UserList() {
+  const { data } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => queryFn('/api/users')
+  });
+
+  return <div>{data?.[0].firstName}</div>;
+}
+```
+
 ## FAQ
 
 ### Does this work with nested objects?

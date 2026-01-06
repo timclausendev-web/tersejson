@@ -5,6 +5,7 @@ export default defineConfig({
     index: 'src/index.ts',
     express: 'src/express.ts',
     client: 'src/client.ts',
+    integrations: 'src/integrations.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,

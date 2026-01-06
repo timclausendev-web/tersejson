@@ -39,6 +39,11 @@
       "types": "./dist/client.d.ts",
       "import": "./dist/client.mjs",
       "require": "./dist/client.js"
+    },
+    "./integrations": {
+      "types": "./dist/integrations.d.ts",
+      "import": "./dist/integrations.mjs",
+      "require": "./dist/integrations.js"
     }
   },
   "files": [
