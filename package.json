@@ -18,7 +18,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/timcarter/tersejson"
+    "url": "https://github.com/timclausendev-web/tersejson"
   },
   "homepage": "https://tersejson.com",
   "main": "./dist/index.js",
@@ -68,6 +68,7 @@
     "@types/node": "^20.11.0",
     "eslint": "^8.56.0",
     "express": "^4.18.2",
+    "sharp": "^0.34.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
