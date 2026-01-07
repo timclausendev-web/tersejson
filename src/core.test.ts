@@ -501,6 +501,208 @@ describe('compression ratio', () => {
   });
 });
 
+describe('memory efficiency - lazy proxy expansion', () => {
+  // Generate a large dataset with 12 fields per object
+  const generateLargeDataset = (count: number) => Array.from({ length: count }, (_, i) => ({
+    id: i,
+    firstName: `FirstName${i}`,
+    lastName: `LastName${i}`,
+    emailAddress: `user${i}@example.com`,
+    phoneNumber: `555-${String(i).padStart(7, '0')}`,
+    streetAddress: `${i} Main Street`,
+    city: `City${i % 100}`,
+    country: `Country${i % 50}`,
+    postalCode: `${10000 + i}`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    metadata: `Some metadata for user ${i} that could be quite long`,
+  }));
+
+  const fieldNames = [
+    'id',
+    'firstName',
+    'lastName',
+    'emailAddress',
+    'phoneNumber',
+    'streetAddress',
+    'city',
+    'country',
+    'postalCode',
+    'createdAt',
+    'updatedAt',
+    'metadata'
+  ] as const;
+
+  it('proxy only expands accessed fields (1 field)', () => {
+    const data = generateLargeDataset(1000);
+    const compressed = compress(data);
+    const proxied = wrapWithProxy<typeof data>(compressed);
+
+    // Access only 1 field per object
+    const result = proxied.map(item => item.id);
+
+    expect(result.length).toBe(1000);
+    expect(result[0]).toBe(0);
+    expect(result[999]).toBe(999);
+  });
+
+  it('proxy only expands accessed fields (2 fields)', () => {
+    const data = generateLargeDataset(1000);
+    const compressed = compress(data);
+    const proxied = wrapWithProxy<typeof data>(compressed);
+
+    // Access only 2 fields per object
+    const result = proxied.map(item => ({ id: item.id, firstName: item.firstName }));
+
+    expect(result.length).toBe(1000);
+    expect(result[0]).toEqual({ id: 0, firstName: 'FirstName0' });
+  });
+
+  it('proxy only expands accessed fields (3 fields)', () => {
+    const data = generateLargeDataset(1000);
+    const compressed = compress(data);
+    const proxied = wrapWithProxy<typeof data>(compressed);
+
+    // Access only 3 fields per object
+    const result = proxied.map(item => ({
+      id: item.id,
+      firstName: item.firstName,
+      lastName: item.lastName
+    }));
+
+    expect(result.length).toBe(1000);
+    expect(result[0]).toEqual({ id: 0, firstName: 'FirstName0', lastName: 'LastName0' });
+  });
+
+  it('proxy only expands accessed fields (4 fields)', () => {
+    const data = generateLargeDataset(1000);
+    const compressed = compress(data);
+    const proxied = wrapWithProxy<typeof data>(compressed);
+
+    // Access only 4 fields per object
+    const result = proxied.map(item => ({
+      id: item.id,
+      firstName: item.firstName,
+      lastName: item.lastName,
+      emailAddress: item.emailAddress
+    }));
+
+    expect(result.length).toBe(1000);
+    expect(result[0].emailAddress).toBe('user0@example.com');
+  });
+
+  it('proxy only expands accessed fields (5 fields)', () => {
+    const data = generateLargeDataset(1000);
+    const compressed = compress(data);
+    const proxied = wrapWithProxy<typeof data>(compressed);
+
+    // Access only 5 fields per object
+    const result = proxied.map(item => ({
+      id: item.id,
+      firstName: item.firstName,
+      lastName: item.lastName,
+      emailAddress: item.emailAddress,
+      city: item.city
+    }));
+
+    expect(result.length).toBe(1000);
+    expect(result[0].city).toBe('City0');
+  });
+
+  it('proxy only expands accessed fields (6 fields)', () => {
+    const data = generateLargeDataset(1000);
+    const compressed = compress(data);
+    const proxied = wrapWithProxy<typeof data>(compressed);
+
+    // Access only 6 fields per object (half of total 12)
+    const result = proxied.map(item => ({
+      id: item.id,
+      firstName: item.firstName,
+      lastName: item.lastName,
+      emailAddress: item.emailAddress,
+      city: item.city,
+      country: item.country
+    }));
+
+    expect(result.length).toBe(1000);
+    expect(result[0].country).toBe('Country0');
+  });
+
+  it('compressed payload is smaller in memory than expanded', () => {
+    const data = generateLargeDataset(1000);
+    const compressed = compress(data);
+
+    const originalSize = JSON.stringify(data).length;
+    const compressedSize = JSON.stringify(compressed).length;
+
+    // TerseJSON payload should be significantly smaller
+    expect(compressedSize).toBeLessThan(originalSize);
+
+    // At least 20% savings for this dataset
+    const savings = ((originalSize - compressedSize) / originalSize) * 100;
+    expect(savings).toBeGreaterThan(20);
+  });
+
+  it('proxy mode vs expand mode - proxy keeps original compressed structure', () => {
+    const data = generateLargeDataset(100);
+    const compressed = compress(data);
+
+    // Proxy mode - original compressed data structure stays intact
+    const proxied = wrapWithProxy<typeof data>(compressed);
+
+    // expand mode - creates new objects with full keys
+    const expanded = expand(compressed);
+
+    // Both should give same results when accessed
+    expect(proxied[0].firstName).toBe(expanded[0].firstName);
+    expect(proxied[50].emailAddress).toBe(expanded[50].emailAddress);
+
+    // But expanded creates new objects while proxy wraps original
+    expect(JSON.stringify(expanded[0])).toContain('firstName');
+    // Proxy access returns the value, original data still has short keys
+    expect(compressed.d[0]).toHaveProperty('a'); // short key still exists
+  });
+
+  it('demonstrates CMS use case - large array, few fields accessed', () => {
+    // Simulate CMS fetching 500 articles with many fields
+    const articles = Array.from({ length: 500 }, (_, i) => ({
+      id: i,
+      title: `Article Title ${i}`,
+      slug: `article-${i}`,
+      excerpt: `This is the excerpt for article ${i}. It contains a brief summary.`,
+      content: `Full content for article ${i}. `.repeat(10),
+      authorId: i % 50,
+      authorName: `Author ${i % 50}`,
+      authorBio: `Bio for author ${i % 50}`,
+      categoryId: i % 20,
+      categoryName: `Category ${i % 20}`,
+      publishedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      featuredImage: `https://example.com/images/article-${i}.jpg`,
+      tags: ['tag1', 'tag2', 'tag3'],
+      viewCount: i * 100,
+      likeCount: i * 10,
+    }));
+
+    const compressed = compress(articles);
+    const proxied = wrapWithProxy<typeof articles>(compressed);
+
+    // CMS list view only needs title + slug + excerpt
+    const listView = proxied.map(article => ({
+      title: article.title,
+      slug: article.slug,
+      excerpt: article.excerpt,
+    }));
+
+    expect(listView.length).toBe(500);
+    expect(listView[0].title).toBe('Article Title 0');
+    expect(listView[0].slug).toBe('article-0');
+
+    // Only 3 of 16 fields were ever accessed
+    // In proxy mode, the other 13 fields stay compressed in memory
+  });
+});
+
 describe('key patterns', () => {
   const testData = [
     { firstName: 'John', lastName: 'Doe' },

@@ -136,6 +136,29 @@ console.log(users[0].emailAddress); // Works transparently!
 
 *Every 100ms of latency costs 1% in conversions (Amazon/Google studies).*
 
+**Memory efficiency (Proxy mode):**
+
+Unlike binary formats (Protocol Buffers, MessagePack) that require full deserialization, TerseJSON's Proxy mode only expands keys when accessed. This is huge for CMS and data-heavy apps:
+
+```javascript
+// CMS fetches 1000 articles with 16 fields each
+const articles = await terseFetch('/api/articles');
+
+// But list view only needs 3 fields
+articles.map(a => ({ title: a.title, slug: a.slug, excerpt: a.excerpt }));
+
+// Result: Only 3 keys translated per object
+// The other 13 fields stay compressed in memory
+```
+
+| Fields Accessed | Proxy Mode | Full Expand |
+|-----------------|------------|-------------|
+| 1 of 12 fields | Translates 1 key | Translates all 12 |
+| 3 of 12 fields | Translates 3 keys | Translates all 12 |
+| 6 of 12 fields | Translates 6 keys | Translates all 12 |
+
+*Perfect for list views, dashboards, and any UI that only displays a subset of fields.*
+
 ## Why Gzip Isn't Enough
 
 **"Just use gzip"** is the most common response to compression libraries. But here's the reality:
