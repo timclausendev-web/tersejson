@@ -1,0 +1,16 @@
+{
+  "name": "tersejson-demo",
+  "version": "1.0.0",
+  "description": "TerseJSON real-world demo with large datasets",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "client": "node client.js",
+    "benchmark": "node benchmark.js",
+    "test": "node test-verification.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "tersejson": "^0.2.1"
+  }
+}

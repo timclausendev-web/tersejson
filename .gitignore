@@ -30,3 +30,5 @@ coverage/
 *.tmp
 *.temp
 SYNC.md
+
+/docs
