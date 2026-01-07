@@ -11,6 +11,10 @@ export default defineConfig({
     'graphql-client': 'src/graphql-client.ts',
     'server-memory': 'src/server-memory.ts',
     mongodb: 'src/mongodb.ts',
+    pg: 'src/pg.ts',
+    mysql: 'src/mysql.ts',
+    sqlite: 'src/sqlite.ts',
+    sequelize: 'src/sequelize.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,
@@ -19,5 +23,5 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   minify: false,
-  external: ['express', 'mongodb'],
+  external: ['express', 'mongodb', 'pg', 'mysql2', 'mysql2/promise', 'better-sqlite3', 'sequelize'],
 });

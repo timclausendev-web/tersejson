@@ -220,6 +220,154 @@ import { unterse } from 'tersejson/mongodb';
 await unterse();
 ```
 
+## PostgreSQL Integration (Zero-Config)
+
+Automatic memory-efficient queries with node-postgres (pg).
+
+```typescript
+import { tersePg } from 'tersejson/pg';
+import { Client, Pool } from 'pg';
+
+// Call once at app startup
+await tersePg();
+
+// All queries automatically return Proxy-wrapped results
+const client = new Client();
+await client.connect();
+const { rows } = await client.query('SELECT * FROM users');
+
+// Access properties normally - 70% less memory
+console.log(rows[0].firstName); // Works transparently!
+
+// Works with Pool too
+const pool = new Pool();
+const { rows: users } = await pool.query('SELECT * FROM users');
+```
+
+**Options:**
+```typescript
+await tersePg({
+  minArrayLength: 5,    // Only compress arrays with 5+ items
+  skipSingleRows: true, // Don't wrap single-row results
+  minKeyLength: 4,      // Only compress keys with 4+ chars
+});
+
+// Restore original behavior
+import { untersePg } from 'tersejson/pg';
+await untersePg();
+```
+
+## MySQL Integration (Zero-Config)
+
+Automatic memory-efficient queries with mysql2.
+
+```typescript
+import { terseMysql } from 'tersejson/mysql';
+import mysql from 'mysql2/promise';
+
+// Call once at app startup
+await terseMysql();
+
+// All queries automatically return Proxy-wrapped results
+const connection = await mysql.createConnection({ host: 'localhost', user: 'root' });
+const [rows] = await connection.query('SELECT * FROM users');
+
+// Access properties normally - 70% less memory
+console.log(rows[0].firstName); // Works transparently!
+
+// Works with Pool too
+const pool = mysql.createPool({ host: 'localhost', user: 'root' });
+const [users] = await pool.query('SELECT * FROM users');
+```
+
+**Options:**
+```typescript
+await terseMysql({
+  minArrayLength: 5,    // Only compress arrays with 5+ items
+  skipSingleRows: true, // Don't wrap single-row results
+  minKeyLength: 4,      // Only compress keys with 4+ chars
+});
+
+// Restore original behavior
+import { unterseMysql } from 'tersejson/mysql';
+await unterseMysql();
+```
+
+## SQLite Integration (Zero-Config)
+
+Automatic memory-efficient queries with better-sqlite3.
+
+```typescript
+import { terseSqlite } from 'tersejson/sqlite';
+import Database from 'better-sqlite3';
+
+// Call once at app startup (synchronous)
+terseSqlite();
+
+// All queries automatically return Proxy-wrapped results
+const db = new Database('my.db');
+const rows = db.prepare('SELECT * FROM users').all();
+
+// Access properties normally - 70% less memory
+console.log(rows[0].firstName); // Works transparently!
+
+// Single row queries too
+const user = db.prepare('SELECT * FROM users WHERE id = ?').get(1);
+console.log(user.email); // Works transparently!
+```
+
+**Options:**
+```typescript
+terseSqlite({
+  minArrayLength: 5,    // Only compress arrays with 5+ items
+  skipSingleRows: true, // Don't wrap get() results
+  minKeyLength: 4,      // Only compress keys with 4+ chars
+});
+
+// Restore original behavior
+import { unterseSqlite } from 'tersejson/sqlite';
+unterseSqlite();
+```
+
+## Sequelize Integration (Zero-Config)
+
+Automatic memory-efficient queries with Sequelize ORM.
+
+```typescript
+import { terseSequelize } from 'tersejson/sequelize';
+import { Sequelize, Model, DataTypes } from 'sequelize';
+
+// Call once at app startup
+await terseSequelize();
+
+// Define your models as normal
+class User extends Model {}
+User.init({ firstName: DataTypes.STRING }, { sequelize });
+
+// All queries automatically return Proxy-wrapped results
+const users = await User.findAll();
+
+// Access properties normally - 70% less memory
+console.log(users[0].firstName); // Works transparently!
+
+// Works with all Sequelize query methods
+const user = await User.findOne({ where: { id: 1 } });
+const { rows, count } = await User.findAndCountAll();
+```
+
+**Options:**
+```typescript
+await terseSequelize({
+  minArrayLength: 5,      // Only compress arrays with 5+ items
+  skipSingleRows: true,   // Don't wrap findOne/findByPk results
+  usePlainObjects: true,  // Convert Model instances to plain objects (default)
+});
+
+// Restore original behavior
+import { unterseSequelize } from 'tersejson/sequelize';
+await unterseSequelize();
+```
+
 ## Server-Side Memory Optimization
 
 TerseJSON includes utilities for memory-efficient server-side data handling:

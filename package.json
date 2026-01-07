@@ -1,6 +1,6 @@
 {
   "name": "tersejson",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Memory-efficient JSON processing. Lazy Proxy expansion uses 70% less RAM than JSON.parse - plus 30-80% smaller payloads.",
   "keywords": [
     "json",
@@ -34,6 +34,15 @@
     "angular",
     "mongodb",
     "mongoose",
+    "postgresql",
+    "pg",
+    "mysql",
+    "mysql2",
+    "sqlite",
+    "better-sqlite3",
+    "sequelize",
+    "orm",
+    "sql",
     "database",
     "key-compression",
     "api-optimization",
@@ -98,6 +107,26 @@
       "types": "./dist/mongodb.d.ts",
       "import": "./dist/mongodb.mjs",
       "require": "./dist/mongodb.js"
+    },
+    "./pg": {
+      "types": "./dist/pg.d.ts",
+      "import": "./dist/pg.mjs",
+      "require": "./dist/pg.js"
+    },
+    "./mysql": {
+      "types": "./dist/mysql.d.ts",
+      "import": "./dist/mysql.mjs",
+      "require": "./dist/mysql.js"
+    },
+    "./sqlite": {
+      "types": "./dist/sqlite.d.ts",
+      "import": "./dist/sqlite.mjs",
+      "require": "./dist/sqlite.js"
+    },
+    "./sequelize": {
+      "types": "./dist/sequelize.d.ts",
+      "import": "./dist/sequelize.mjs",
+      "require": "./dist/sequelize.js"
     }
   },
   "files": [
@@ -113,11 +142,15 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^4.17.21",
     "@types/node": "^20.11.0",
+    "@types/pg": "^8.16.0",
     "eslint": "^8.56.0",
     "express": "^4.18.2",
     "mongodb": "^7.0.0",
+    "mysql2": "^3.16.0",
+    "sequelize": "^6.37.7",
     "sharp": "^0.34.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
@@ -125,8 +158,12 @@
   },
   "peerDependencies": {
     "@apollo/client": ">=3.0.0",
+    "better-sqlite3": ">=9.0.0",
     "express": ">=4.0.0",
-    "mongodb": ">=5.0.0"
+    "mongodb": ">=5.0.0",
+    "mysql2": ">=3.0.0",
+    "pg": ">=8.0.0",
+    "sequelize": ">=6.0.0"
   },
   "peerDependenciesMeta": {
     "express": {
@@ -136,6 +173,18 @@
       "optional": true
     },
     "mongodb": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    },
+    "mysql2": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "sequelize": {
       "optional": true
     }
   },
