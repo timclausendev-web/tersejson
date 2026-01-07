@@ -7,6 +7,8 @@ export default defineConfig({
     client: 'src/client.ts',
     integrations: 'src/integrations.ts',
     analytics: 'src/analytics.ts',
+    graphql: 'src/graphql.ts',
+    'graphql-client': 'src/graphql-client.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,

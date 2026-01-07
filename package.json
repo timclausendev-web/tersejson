@@ -1,6 +1,6 @@
 {
   "name": "tersejson",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Transparent JSON key compression for Express APIs. Reduce bandwidth by up to 80% with zero code changes.",
   "keywords": [
     "json",
@@ -12,13 +12,40 @@
     "api",
     "rest",
     "keys",
-    "minify"
+    "minify",
+    "json-compression",
+    "payload",
+    "reduce",
+    "compact",
+    "shrink",
+    "performance",
+    "network",
+    "http",
+    "response",
+    "nodejs",
+    "node",
+    "fetch",
+    "axios",
+    "react-query",
+    "swr",
+    "angular",
+    "restful",
+    "key-compression",
+    "json-minify",
+    "api-optimization",
+    "payload-compression",
+    "lightweight",
+    "proxy",
+    "transparent"
   ],
   "author": "Tim Carter",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/timclausendev-web/tersejson"
+  },
+  "bugs": {
+    "url": "https://github.com/timclausendev-web/tersejson/issues"
   },
   "homepage": "https://tersejson.com",
   "main": "./dist/index.js",
@@ -49,6 +76,16 @@
       "types": "./dist/analytics.d.ts",
       "import": "./dist/analytics.mjs",
       "require": "./dist/analytics.js"
+    },
+    "./graphql": {
+      "types": "./dist/graphql.d.ts",
+      "import": "./dist/graphql.mjs",
+      "require": "./dist/graphql.js"
+    },
+    "./graphql-client": {
+      "types": "./dist/graphql-client.d.ts",
+      "import": "./dist/graphql-client.mjs",
+      "require": "./dist/graphql-client.js"
     }
   },
   "files": [
@@ -74,10 +111,14 @@
     "vitest": "^1.2.0"
   },
   "peerDependencies": {
-    "express": ">=4.0.0"
+    "express": ">=4.0.0",
+    "@apollo/client": ">=3.0.0"
   },
   "peerDependenciesMeta": {
     "express": {
+      "optional": true
+    },
+    "@apollo/client": {
       "optional": true
     }
   },

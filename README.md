@@ -105,13 +105,90 @@ console.log(users[0].emailAddress); // Works transparently!
 
 ### Bandwidth Savings
 
-| Scenario | Original | Compressed | Savings |
-|----------|----------|------------|---------|
+**Without gzip (many servers don't have it enabled):**
+
+| Scenario | Original | With TerseJSON | Savings |
+|----------|----------|----------------|---------|
 | 100 users, 10 fields | 45 KB | 12 KB | **73%** |
 | 1000 products, 15 fields | 890 KB | 180 KB | **80%** |
 | 10000 logs, 8 fields | 2.1 MB | 450 KB | **79%** |
 
-*Note: These savings are **before** gzip. Combined with gzip, total reduction can exceed 90%.*
+*Many Express apps, serverless functions, and internal APIs don't enable gzip. TerseJSON is often easier to add than configuring compression.*
+
+**With gzip already enabled:**
+
+| Scenario | JSON + gzip | TerseJSON + gzip | Additional Savings |
+|----------|-------------|------------------|-------------------|
+| 100 users, 10 fields | 8.2 KB | 6.1 KB | **25%** |
+| 1000 products, 15 fields | 48 KB | 38 KB | **21%** |
+| 10000 logs, 8 fields | 185 KB | 142 KB | **23%** |
+
+*If you already use gzip, TerseJSON stacks on top for additional savings.*
+
+**At enterprise scale:**
+
+| Traffic | Savings/request | Daily Savings | Monthly Savings |
+|---------|-----------------|---------------|-----------------|
+| 1M requests/day | 40 KB | **40 GB** | **1.2 TB** |
+| 10M requests/day | 40 KB | **400 GB** | **12 TB** |
+| 100M requests/day | 40 KB | **4 TB** | **120 TB** |
+
+*At $0.09/GB egress, 10M requests/day = ~$1,000/month saved.*
+
+## Why Gzip Isn't Enough
+
+**"Just use gzip"** is the most common response to compression libraries. But here's the reality:
+
+### Gzip Often Isn't Enabled
+
+- **11%** of websites have zero compression (W3Techs)
+- **60%** of HTTP responses have no text-based compression (HTTP Archive)
+
+### Proxy Defaults Are Hostile
+
+Most deployments put a reverse proxy (nginx, Traefik, etc.) in front of Node.js. The defaults actively work against you:
+
+**NGINX:**
+- `gzip_proxied` defaults to `off` — won't compress proxied requests
+- `gzip_http_version` defaults to `1.1`, but `proxy_http_version` defaults to `1.0` — mismatch causes silent failures
+- Official Docker nginx image ships with `#gzip on;` (commented out)
+
+**Traefik (Dokploy, Coolify, etc.):**
+- Compress middleware is NOT enabled by default
+- Must explicitly add labels to every service:
+```yaml
+traefik.http.middlewares.compress.compress=true
+traefik.http.routers.myrouter.middlewares=compress
+```
+
+**Kubernetes ingress-nginx:**
+- `use-gzip: false` by default in ConfigMap
+- Must explicitly configure in ingress-nginx-controller
+
+### The Fix Requires DevOps
+
+Enabling gzip properly requires:
+```nginx
+gzip on;
+gzip_proxied any;
+gzip_http_version 1.0;
+gzip_types text/plain application/json application/javascript text/css;
+```
+
+That means DevOps coordination, nginx access, and deployment. In most orgs, the proxy is managed by a different team.
+
+### TerseJSON Just Works
+
+```typescript
+app.use(terse())
+```
+
+One line. Ships with your code. No proxy config. No DevOps ticket. Works whether gzip is enabled or not.
+
+**If gzip is working:** You get 15-25% additional savings on top.
+**If gzip isn't working:** You get 70-80% savings instantly.
+
+Either way, you're covered.
 
 ## API Reference
 
@@ -455,7 +532,28 @@ Minimal. Key mapping is O(n) and Proxy access adds negligible overhead. The band
 
 ### Can I use this with GraphQL?
 
-TerseJSON is designed for REST APIs. GraphQL already has efficient query mechanisms.
+Yes! TerseJSON supports GraphQL via `express-graphql` and Apollo Client:
+
+```typescript
+// Server (express-graphql)
+import { graphqlHTTP } from 'express-graphql';
+import { terseGraphQL } from 'tersejson/graphql';
+
+app.use('/graphql', terseGraphQL(graphqlHTTP({
+  schema: mySchema,
+  graphiql: true,
+})));
+
+// Client (Apollo)
+import { createTerseLink } from 'tersejson/graphql-client';
+
+const client = new ApolloClient({
+  link: from([createTerseLink(), httpLink]),
+  cache: new InMemoryCache(),
+});
+```
+
+GraphQL queries returning arrays of objects (like `users { firstName lastName }`) benefit from the same key compression.
 
 ## Browser Support
 

@@ -50,12 +50,21 @@ export type {
   KeyGenerator,
   NestedHandling,
   Tersed,
+  // GraphQL types
+  GraphQLTerseMetadata,
+  GraphQLTerseResponse,
+  GraphQLTerseOptions,
 } from './types';
+
+// GraphQL type guard
+export { isGraphQLTersePayload } from './types';
 
 // Re-export submodules for convenience
 export * as express from './express';
 export * as client from './client';
 export * as integrations from './integrations';
+export * as graphql from './graphql';
+export * as graphqlClient from './graphql-client';
 
 // Analytics exports
 export {

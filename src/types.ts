@@ -170,3 +170,74 @@ export function isTersePayload(value: unknown): value is TersePayload {
     'd' in value
   );
 }
+
+/**
+ * GraphQL terse metadata (attached to response)
+ */
+export interface GraphQLTerseMetadata {
+  /** Version for compatibility */
+  v: 1;
+  /** Key mapping: short key -> original key */
+  k: Record<string, string>;
+  /** JSON paths to compressed arrays (e.g., ["data.users", "data.products"]) */
+  paths: string[];
+}
+
+/**
+ * GraphQL response with terse compression
+ */
+export interface GraphQLTerseResponse<T = unknown> {
+  /** The compressed data with short keys in arrays */
+  data: T;
+  /** GraphQL errors (untouched) */
+  errors?: Array<{ message: string; [key: string]: unknown }>;
+  /** GraphQL extensions (untouched) */
+  extensions?: Record<string, unknown>;
+  /** Terse metadata */
+  __terse__: GraphQLTerseMetadata;
+}
+
+/**
+ * GraphQL middleware options
+ */
+export interface GraphQLTerseOptions extends CompressOptions {
+  /**
+   * Minimum array length to trigger compression
+   * @default 2
+   */
+  minArrayLength?: number;
+
+  /**
+   * Custom function to determine if a path should be compressed
+   * Return false to skip compression for specific paths
+   */
+  shouldCompress?: (data: unknown, path: string) => boolean;
+
+  /**
+   * Paths to exclude from compression (e.g., ["data.config"])
+   */
+  excludePaths?: string[];
+
+  /**
+   * Enable debug logging
+   * @default false
+   */
+  debug?: boolean;
+}
+
+/**
+ * Check if a value is a GraphQL terse response
+ */
+export function isGraphQLTersePayload(value: unknown): value is GraphQLTerseResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'data' in value &&
+    '__terse__' in value &&
+    typeof (value as GraphQLTerseResponse).__terse__ === 'object' &&
+    (value as GraphQLTerseResponse).__terse__ !== null &&
+    'v' in (value as GraphQLTerseResponse).__terse__ &&
+    'k' in (value as GraphQLTerseResponse).__terse__ &&
+    'paths' in (value as GraphQLTerseResponse).__terse__
+  );
+}
