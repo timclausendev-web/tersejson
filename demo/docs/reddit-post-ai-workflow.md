@@ -64,28 +64,85 @@ Every project has a markdown file that tells the AI:
 # CLAUDE.md
 
 ## Project: TerseJSON
-- TypeScript, strict mode
-- Testing: vitest
-- Build: tsup
+- TypeScript, strict mode, no `any` types
+- Node.js 20+ with native fetch
+- MongoDB Atlas (self-hosted cluster) with native driver (NOT Mongoose)
+- Testing: vitest with coverage > 80%
+- Build: tsup, dual ESM/CJS output
+- Auth: JWT with RS256, refresh tokens in httpOnly cookies
+- API style: REST with consistent error format
+- Never use ORMs - raw queries only
 - Always write tests before implementation
-- Never use `any` type
-- Follow existing patterns in codebase
+- Use pnpm, not npm or yarn
+
+## File Structure
+- /src/core.ts - main logic
+- /src/express.ts - middleware
+- /src/client.ts - browser SDK
+
+## Database
+- Connection string in env.DATABASE_URL
+- Always use transactions for multi-doc writes
+- Index all query fields
+
+## DON'T
+- No Mongoose, no Prisma
+- No Express body-parser (use built-in)
+- No moment.js (use date-fns)
+- No lodash (use native methods)
 ```
 
-The AI reads this on every interaction. No more explaining your stack repeatedly.
+The AI reads this on every interaction. It knows your exact stack, your preferences, your anti-patterns.
 
 **2. MCP Servers (Model Context Protocol)**
 
-Custom tools that give AI access to:
-- Your database schema
-- API documentation
-- Internal libraries
-- Deployment configs
-- Project-specific commands
+Custom tools that give AI direct access to your infrastructure:
 
-Instead of copy-pasting docs, the AI can query them directly.
+```javascript
+// Example: MongoDB MCP server
+// AI can query your actual schema, not guess at it
 
-**3. Plan Mode**
+mcp.tool("getCollectionSchema", async ({ collection }) => {
+  const sample = await db.collection(collection).findOne();
+  const indexes = await db.collection(collection).indexes();
+  return { fields: Object.keys(sample), indexes };
+});
+
+mcp.tool("runAggregation", async ({ collection, pipeline }) => {
+  return await db.collection(collection).aggregate(pipeline).toArray();
+});
+```
+
+Real MCPs I use:
+- **Database MCP** - Query MongoDB schema, run aggregations, check indexes
+- **Playwright MCP** - AI can actually see and interact with the running app
+- **Git MCP** - Check branch status, diff, blame without copy-pasting
+- **Docker MCP** - Container status, logs, restart services
+- **Sentry MCP** - Pull actual error traces into context
+
+Instead of "here's my schema" copy-paste, the AI queries it directly and stays in sync.
+
+**3. Context is Everything**
+
+The AI can only work with what it sees. Professional workflows maximize context:
+
+- **Highlight code in VS Code** → AI sees exactly what you're referring to
+- **Share error messages** → Full stack trace, not "it doesn't work"
+- **Reference specific files** → "Look at src/utils/auth.ts lines 45-60"
+- **Share screenshots** → UI bugs, design specs, error states
+
+```
+Amateur: "The login is broken"
+
+Professional: *highlights the auth function*
+"This function throws on line 47 when the token is expired.
+Here's the error: [paste full error].
+Fix it to handle expired tokens gracefully like we do in refreshToken.ts"
+```
+
+The more context, the better the output.
+
+**4. Plan Mode**
 
 Before writing code:
 ```
@@ -98,21 +155,38 @@ Before writing code:
 
 The AI explores your codebase, understands patterns, proposes approach. You review. THEN it codes.
 
-**4. Specs, Not Wishes**
+**5. Specs, Not Wishes**
 
 ```
-Amateur: "Make the button look better"
+Amateur: "Add user search to the API"
 
-Professional: "Change the submit button:
-- Use our design system's primary variant
-- Add loading state with spinner from /components/Spinner
-- Disable during form submission
-- Match the pattern in LoginForm.tsx"
+Professional: "Add GET /api/users/search endpoint:
+- Query param: ?q=<search term>
+- Search fields: email, firstName, lastName (case-insensitive)
+- Use MongoDB text index (already exists on users collection)
+- Pagination: ?page=1&limit=20, return { users, total, pages }
+- Auth: requireAuth middleware from /src/middleware/auth.ts
+- Response format: match /api/users/:id pattern
+- Add rate limiting: 30 req/min per user
+- Test file: /src/routes/users.test.ts, follow existing patterns"
+```
+
+The more specific, the less back-and-forth.
+
+```
+Amateur: "The aggregation is slow"
+
+Professional: "This MongoDB aggregation in /src/services/analytics.ts:42
+takes 3s on 1M documents. Current pipeline: [paste pipeline]
+- Add $match stage first to filter by date range
+- Use $project before $group to reduce document size
+- Check if we need an index on { userId: 1, createdAt: -1 }
+- Target: <200ms for 30-day range"
 ```
 
 Specific inputs = specific outputs.
 
-**5. Iterative Refinement**
+**6. Iterative Refinement**
 
 ```
 "Run the tests"
@@ -149,12 +223,18 @@ This is collaborative development, not "AI write my code."
 
 ### Results
 
-Using this workflow, I built:
-- npm library with 100+ tests
-- Full TypeScript coverage
-- Express middleware + client SDK
-- Framework integrations (React Query, Axios, Angular)
-- Documentation and benchmarks
+Using this workflow, I built and shipped:
+- npm library with 100+ tests, 90%+ coverage
+- TypeScript strict mode, zero `any` types
+- Express middleware with 0 dependencies
+- Client SDK with Proxy-based lazy expansion
+- Framework integrations (React Query, SWR, Axios, Angular, jQuery)
+- MongoDB-style aggregation pipeline for nested compression
+- Full GraphQL support (Apollo Client + express-graphql)
+- Memory benchmarks showing 70% RAM reduction
+- Deployed to production handling 10K+ requests/day
+
+Tech stack: Node 20, native MongoDB driver, vitest, tsup, pnpm.
 
 **The AI didn't replace my skills - it amplified them.**
 
