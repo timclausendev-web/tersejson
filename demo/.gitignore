@@ -1,0 +1,8 @@
+# Dependencies
+node_modules/
+
+# Generated reports (run npm run report to generate)
+tersejson-report-*.pdf
+
+# Logs
+*.log

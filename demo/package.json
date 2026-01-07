@@ -7,10 +7,13 @@
     "start": "node server.js",
     "client": "node client.js",
     "benchmark": "node benchmark.js",
-    "test": "node test-verification.js"
+    "test": "node test-verification.js",
+    "report": "node generate-report.js"
   },
   "dependencies": {
+    "chartjs-node-canvas": "^5.0.0",
     "express": "^4.18.2",
+    "pdfkit": "^0.17.2",
     "tersejson": "^0.2.1"
   }
 }
