@@ -1,9 +1,15 @@
 {
   "name": "tersejson",
-  "version": "0.2.1",
-  "description": "Transparent JSON key compression for Express APIs. Reduce bandwidth by up to 80% with zero code changes.",
+  "version": "0.3.0",
+  "description": "Memory-efficient JSON processing. Lazy Proxy expansion uses 70% less RAM than JSON.parse - plus 30-80% smaller payloads.",
   "keywords": [
     "json",
+    "memory-efficient",
+    "lazy-loading",
+    "proxy",
+    "low-memory",
+    "gc-friendly",
+    "partial-deserialization",
     "compression",
     "express",
     "middleware",
@@ -17,11 +23,8 @@
     "payload",
     "reduce",
     "compact",
-    "shrink",
     "performance",
     "network",
-    "http",
-    "response",
     "nodejs",
     "node",
     "fetch",
@@ -29,13 +32,9 @@
     "react-query",
     "swr",
     "angular",
-    "restful",
     "key-compression",
-    "json-minify",
     "api-optimization",
-    "payload-compression",
     "lightweight",
-    "proxy",
     "transparent"
   ],
   "author": "Tim Carter",
@@ -86,6 +85,11 @@
       "types": "./dist/graphql-client.d.ts",
       "import": "./dist/graphql-client.mjs",
       "require": "./dist/graphql-client.js"
+    },
+    "./server-memory": {
+      "types": "./dist/server-memory.d.ts",
+      "import": "./dist/server-memory.mjs",
+      "require": "./dist/server-memory.js"
     }
   },
   "files": [

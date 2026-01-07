@@ -9,6 +9,7 @@ export default defineConfig({
     analytics: 'src/analytics.ts',
     graphql: 'src/graphql.ts',
     'graphql-client': 'src/graphql-client.ts',
+    'server-memory': 'src/server-memory.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,
