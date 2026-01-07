@@ -10,6 +10,7 @@ export default defineConfig({
     graphql: 'src/graphql.ts',
     'graphql-client': 'src/graphql-client.ts',
     'server-memory': 'src/server-memory.ts',
+    mongodb: 'src/mongodb.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,
@@ -18,5 +19,5 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   minify: false,
-  external: ['express'],
+  external: ['express', 'mongodb'],
 });

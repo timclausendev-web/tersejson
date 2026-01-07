@@ -181,6 +181,45 @@ If you access 3 fields from a 21-field object:
 - Protobuf: All 21 fields deserialized into memory
 - TerseJSON: Only 3 fields materialize
 
+## MongoDB Integration (Zero-Config)
+
+**NEW:** Automatic memory-efficient queries with MongoDB native driver.
+
+```typescript
+import { terseMongo } from 'tersejson/mongodb';
+import { MongoClient } from 'mongodb';
+
+// Call once at app startup
+await terseMongo();
+
+// All queries automatically return Proxy-wrapped results
+const client = new MongoClient(uri);
+const users = await client.db('mydb').collection('users').find().toArray();
+
+// Access properties normally - 70% less memory
+console.log(users[0].firstName); // Works transparently!
+```
+
+**What gets patched:**
+- `find().toArray()` - arrays of documents
+- `find().next()` - single document iteration
+- `for await (const doc of cursor)` - async iteration
+- `findOne()` - single document queries
+- `aggregate().toArray()` - aggregation results
+
+**Options:**
+```typescript
+await terseMongo({
+  minArrayLength: 5,    // Only compress arrays with 5+ items
+  skipSingleDocs: true, // Don't wrap findOne results
+  minKeyLength: 4,      // Only compress keys with 4+ chars
+});
+
+// Restore original behavior
+import { unterse } from 'tersejson/mongodb';
+await unterse();
+```
+
 ## Server-Side Memory Optimization
 
 TerseJSON includes utilities for memory-efficient server-side data handling:
