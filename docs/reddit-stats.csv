@@ -1,9 +1,0 @@
-timestamp,views,views_delta,upvotes,upvotes_delta,upvote_ratio,comments,comments_delta,github_stars,notes
-2026-01-06T21:00:00,5700,605,5,1,72.7,39,5,0,Initial tracking
-2026-01-06T21:45:00,6900,0,9,0,0,46,0,0,Screenshot showed 6.9K views
-2026-01-06T22:30:00,9000,1400,10,2,81.3,56,5,3,Second wind - upvote ratio improving
-2026-01-06T23:00:00,9500,1800,8,-2,72.2,61,10,3,Some downvotes came in - Australia in top countries
-2026-01-06T23:30:00,9800,19,8,0,72.2,61,0,3,Traffic slowing - hour 5 only 19 views
-2026-01-06T23:45:00,10000,436,8,0,72.2,61,0,3,Hit 10K views milestone - karma back to 47
-2026-01-07T00:00:00,10347,636,8,0,72.2,61,0,3,Still climbing at 11pm EST - hour 5 up to 636
-2026-01-07T00:15:00,11000,822,8,0,72.2,61,0,3,Hit 11K - still going near midnight

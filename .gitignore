@@ -31,4 +31,5 @@ coverage/
 *.temp
 SYNC.md
 
+# Private docs (kept local only)
 /docs
