@@ -247,9 +247,121 @@ describe('createTerseProxy', () => {
     expect(keys).toContain('firstName');
     expect(keys).toContain('lastName');
   });
+
+  it('supports object spread {...obj}', () => {
+    const compressed = { a: 'John', b: 'Doe', c: 30 };
+    const keyMap = { a: 'firstName', b: 'lastName', c: 'age' };
+
+    const proxy = createTerseProxy<{ firstName: string; lastName: string; age: number }>(
+      compressed,
+      keyMap
+    );
+
+    const spread = { ...proxy };
+    expect(spread.firstName).toBe('John');
+    expect(spread.lastName).toBe('Doe');
+    expect(spread.age).toBe(30);
+    expect(Object.keys(spread)).toEqual(['firstName', 'lastName', 'age']);
+  });
+
+  it('supports Object.assign()', () => {
+    const compressed = { a: 'John', b: 'Doe' };
+    const keyMap = { a: 'firstName', b: 'lastName' };
+
+    const proxy = createTerseProxy<{ firstName: string; lastName: string }>(
+      compressed,
+      keyMap
+    );
+
+    const assigned = Object.assign({}, proxy);
+    expect(assigned.firstName).toBe('John');
+    expect(assigned.lastName).toBe('Doe');
+  });
+
+  it('supports object destructuring', () => {
+    const compressed = { a: 'John', b: 'Doe', c: 'john@example.com' };
+    const keyMap = { a: 'firstName', b: 'lastName', c: 'email' };
+
+    const proxy = createTerseProxy<{ firstName: string; lastName: string; email: string }>(
+      compressed,
+      keyMap
+    );
+
+    const { firstName, lastName, email } = proxy;
+    expect(firstName).toBe('John');
+    expect(lastName).toBe('Doe');
+    expect(email).toBe('john@example.com');
+  });
+
+  it('supports JSON.stringify()', () => {
+    const compressed = { a: 'John', b: 'Doe' };
+    const keyMap = { a: 'firstName', b: 'lastName' };
+
+    const proxy = createTerseProxy<{ firstName: string; lastName: string }>(
+      compressed,
+      keyMap
+    );
+
+    const json = JSON.stringify(proxy);
+    const parsed = JSON.parse(json);
+    expect(parsed.firstName).toBe('John');
+    expect(parsed.lastName).toBe('Doe');
+    expect(parsed.a).toBeUndefined();
+  });
+
+  it('supports Object.entries()', () => {
+    const compressed = { a: 'John', b: 'Doe' };
+    const keyMap = { a: 'firstName', b: 'lastName' };
+
+    const proxy = createTerseProxy<{ firstName: string; lastName: string }>(
+      compressed,
+      keyMap
+    );
+
+    const entries = Object.entries(proxy);
+    expect(entries).toContainEqual(['firstName', 'John']);
+    expect(entries).toContainEqual(['lastName', 'Doe']);
+  });
+
+  it('supports Object.values()', () => {
+    const compressed = { a: 'John', b: 'Doe' };
+    const keyMap = { a: 'firstName', b: 'lastName' };
+
+    const proxy = createTerseProxy<{ firstName: string; lastName: string }>(
+      compressed,
+      keyMap
+    );
+
+    const values = Object.values(proxy);
+    expect(values).toContain('John');
+    expect(values).toContain('Doe');
+  });
+
+  it('supports for...in loop', () => {
+    const compressed = { a: 'John', b: 'Doe' };
+    const keyMap = { a: 'firstName', b: 'lastName' };
+
+    const proxy = createTerseProxy<{ firstName: string; lastName: string }>(
+      compressed,
+      keyMap
+    );
+
+    const keys: string[] = [];
+    for (const key in proxy) {
+      keys.push(key);
+    }
+    expect(keys).toContain('firstName');
+    expect(keys).toContain('lastName');
+  });
 });
 
 describe('wrapWithProxy', () => {
+  const testPayload = () => compress([
+    { firstName: 'John', lastName: 'Doe', age: 30, active: true },
+    { firstName: 'Jane', lastName: 'Smith', age: 25, active: false },
+    { firstName: 'Bob', lastName: 'Wilson', age: 35, active: true },
+  ]);
+
   it('wraps array items with proxies', () => {
     const payload = compress([
       { firstName: 'John', lastName: 'Doe' },
@@ -262,6 +374,103 @@ describe('wrapWithProxy', () => {
 
     expect(wrapped[0].firstName).toBe('John');
     expect(wrapped[1].firstName).toBe('Jane');
+  });
+
+  it('supports array spread [...arr]', () => {
+    const wrapped = wrapWithProxy<Array<{ firstName: string }>>(testPayload());
+    const spread = [...wrapped];
+
+    expect(spread.length).toBe(3);
+    expect(spread[0].firstName).toBe('John');
+    expect(spread[2].firstName).toBe('Bob');
+  });
+
+  it('supports array destructuring', () => {
+    const wrapped = wrapWithProxy<Array<{ firstName: string }>>(testPayload());
+    const [first, second, ...rest] = wrapped;
+
+    expect(first.firstName).toBe('John');
+    expect(second.firstName).toBe('Jane');
+    expect(rest.length).toBe(1);
+    expect(rest[0].firstName).toBe('Bob');
+  });
+
+  it('supports .map()', () => {
+    const wrapped = wrapWithProxy<Array<{ firstName: string; lastName: string }>>(testPayload());
+    const names = wrapped.map(u => `${u.firstName} ${u.lastName}`);
+
+    expect(names).toEqual(['John Doe', 'Jane Smith', 'Bob Wilson']);
+  });
+
+  it('supports .filter()', () => {
+    const wrapped = wrapWithProxy<Array<{ firstName: string; active: boolean }>>(testPayload());
+    const active = wrapped.filter(u => u.active);
+
+    expect(active.length).toBe(2);
+    expect(active[0].firstName).toBe('John');
+    expect(active[1].firstName).toBe('Bob');
+  });
+
+  it('supports .find()', () => {
+    const wrapped = wrapWithProxy<Array<{ firstName: string; age: number }>>(testPayload());
+    const found = wrapped.find(u => u.age === 25);
+
+    expect(found?.firstName).toBe('Jane');
+  });
+
+  it('supports .some() and .every()', () => {
+    const wrapped = wrapWithProxy<Array<{ active: boolean }>>(testPayload());
+
+    expect(wrapped.some(u => u.active)).toBe(true);
+    expect(wrapped.every(u => u.active)).toBe(false);
+  });
+
+  it('supports .reduce()', () => {
+    const wrapped = wrapWithProxy<Array<{ age: number }>>(testPayload());
+    const totalAge = wrapped.reduce((sum, u) => sum + u.age, 0);
+
+    expect(totalAge).toBe(90);
+  });
+
+  it('supports .forEach()', () => {
+    const wrapped = wrapWithProxy<Array<{ firstName: string }>>(testPayload());
+    const names: string[] = [];
+    wrapped.forEach(u => names.push(u.firstName));
+
+    expect(names).toEqual(['John', 'Jane', 'Bob']);
+  });
+
+  it('supports for...of loop', () => {
+    const wrapped = wrapWithProxy<Array<{ firstName: string }>>(testPayload());
+    const names: string[] = [];
+    for (const user of wrapped) {
+      names.push(user.firstName);
+    }
+
+    expect(names).toEqual(['John', 'Jane', 'Bob']);
+  });
+
+  it('supports JSON.stringify() on array', () => {
+    const wrapped = wrapWithProxy<Array<{ firstName: string; lastName: string }>>(testPayload());
+    const json = JSON.stringify(wrapped);
+    const parsed = JSON.parse(json);
+
+    expect(parsed[0].firstName).toBe('John');
+    expect(parsed[0].a).toBeUndefined(); // Short key should not appear
+  });
+
+  it('supports nested object spread', () => {
+    const payload = compress([
+      { user: { firstName: 'John', lastName: 'Doe' }, meta: { id: 1 } },
+    ]);
+    const wrapped = wrapWithProxy<Array<{ user: { firstName: string; lastName: string }; meta: { id: number } }>>(payload);
+
+    const { user, meta } = wrapped[0];
+    const spreadUser = { ...user };
+
+    expect(spreadUser.firstName).toBe('John');
+    expect(spreadUser.lastName).toBe('Doe');
+    expect(meta.id).toBe(1);
   });
 });
 
